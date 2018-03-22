@@ -1,0 +1,214 @@
+#! /bin/bash
+#数据库使用的一些方法
+#2012年10月17日 19:31:49
+#made by 邱向阳
+#
+currDir=`pwd`
+cd $(dirname $0)
+
+. ../utils/qiunet.utils
+
+MYSQLHOST=`getProperty mysql.properties  host`
+MYSQLPORT=`getProperty mysql.properties  port`
+MYSQLUSER=`getProperty mysql.properties  user`
+MYSQLPASS=`getProperty mysql.properties  pass`
+
+MYSQL_OPTS="-u$MYSQLUSER -p$MYSQLPASS -P$MYSQLPORT --default-character-set=utf8mb4 -h$MYSQLHOST"
+
+function EXEC {
+  if [ $# -ne 1 ];then
+                echo "EXEC must have one param ,example : EXEC 'show databases'"
+                return 1
+        fi
+        mysql ${MYSQL_OPTS} -e "$1"
+        if [ $? -ne 0 ];then
+                echo "please check sql[$1] ,example : EXEC 'show databases'"
+                return 1
+        fi
+        return 0
+}
+function EXISTDB {
+	if [ -z "$*" ];then
+		echo "param count must greater than zero "
+	fi;
+	for i in $* ;
+	do
+		EXEC "use $i;"
+		if [ $? -ne 0 ];then
+			echo "db $i do not exist!!"
+			exit 1 
+		fi
+	done
+}
+function EXISTTB {
+        if [ -z "$*" ];then
+                echo "param count must greater than zero "
+        fi;
+	EXISTDB $1
+	
+        for i in $2 ;
+        do
+                EXEC "use $1;select count(*) from \`$i\`;"
+                if [ $? -ne 0 ];then
+                        echo "db table $i do not exist!!"
+                        exit 1
+                fi
+        done
+}
+function BACKUPDB {
+        if [ $# -ne 3 ];then
+                echo "BACKUPDB must have two param ,example BACKUPDB '--no-data' DbName DbName.sql"
+                return 1
+        fi
+       	EXISTDB "$2"
+	#EXISTDB中会退出.所以不会执行下面的代码	
+	mysqldump --databases $1 ${MYSQL_OPTS}  $2 > $3
+        return 0
+}
+function BACKUPONEDB {
+	if [ $# -ne 2 ]; then
+		echo "BACKUPSD need two param ,example BACKUPSD dbName outFileName"
+		return 1
+	fi
+	EXISTDB $1
+	mysqldump ${MYSQL_OPTS}  $1 > $2
+	return 0
+}
+function BACKUPTB {
+        if [ $# -ne 4 ];then
+                echo "BACKUPTB must have 4 param ,example BACKUPDB '-d' DbName 'top_gem'  DbName.sql"
+                return 1
+        fi
+	EXISTTB $2 "$3"
+	#EXISTTB 会自己退出.不用检验
+        mysqldump ${MYSQL_OPTS} $1 $2 $3 > $4
+        return 0
+}
+
+# 往一个库的执行文件.
+function EXEC_SQL {
+        if [ $# -ne 2 ];then
+                echo "EXEC_SQL must have two param ,example EXEC_SQL DbName DbName.sql"
+                return 1
+        fi
+	EXISTDB "$1"       
+ 	mysql ${MYSQL_OPTS} $1 < $2
+}
+function RESTORY {
+	if [ $# -ne 1 ];then
+                echo "RESTORY must have two param ,example RESTORY player.sql"
+                return 1
+        fi
+	mysql ${MYSQL_OPTS}  < $1
+}
+function TRUNCATETABLES {
+	EXISTDB $1
+	for i in $2;
+	do
+		EXISTTB $1 $i
+		echo "are you sure delete all data in table $i?"
+		echo "please enter you choise yes/no"
+		read "param"
+		if [ "$param" == 'yes' ];then
+			EXEC "use $1; truncate \`$i\`"
+		else
+                	echo "read error"  
+		fi
+	done
+}
+function showTables {
+#	`EXEC "use $1 ;show tables;"`|tr ' ' '\n'|grep -v 'Tables'|tr '\n' ' '
+ 	mysql -s ${MYSQL_OPTS}  -e "use $1; show tables;"
+}
+function TRUNCATEDB {
+        EXISTDB $1
+	 echo "are you sure delete all data in db $1?"
+         echo "please enter 'yes,i need truncate all table of db $1'"
+         read "param"
+	 if [ "$param" == 'yes,i need truncate all table of db '$1 ];then
+		TABALENAMES=`showTables "$1"`
+       		 for i in $TABALENAMES;
+        	 do
+               		 EXEC "use $1; truncate \`$i\`"
+       		 done
+	else
+		echo "read error"	
+	fi
+}
+function DROPDB {
+        EXISTDB $1
+         echo "are you sure delete all table in db $1?"
+         echo "please enter  'yes,i need delete all table of db $1'"
+         read "param"
+         if [ "$param" == 'yes,i need delete all table of db '$1 ];then
+                TABALENAMES=`showTables "$1"`
+                 for i in $TABALENAMES;
+                 do
+                         EXEC "use $1; drop table \`$i\`;"
+                 done
+	else
+                echo "read error"  
+        fi
+}
+# "" 可以禁用shell的再次解析
+
+
+
+case "$1" in 
+	# ./edb exec "use DbName;select * from top_level"
+	exec)
+		EXEC "$2"
+	;;
+	# ./edb backupdb "--no-data" "DbName DbName_0 DbName_1" DbName.sql
+	backupdb)
+		BACKUPDB "$2" "$3" "$4"
+	;;
+	# ./edb backuptb "-d" DbName "top_level top_gem" DbName.sql
+	backuptb)
+		BACKUPTB  "$2" "$3" "$4"  "$5"
+	;;
+	# ./edb execsql DbName DbName.sql
+	execsql)
+		EXEC_SQL "$2" "$3"
+	;;
+	# ./edb restory allDatabasesData.sql
+        restory)
+                RESTORY "$2" 
+        ;;
+	#./edb truncatetables DbName "g_chuanyin"
+	truncatetables)
+		TRUNCATETABLES "$2" "$3"
+	;;
+	# ./edb truncatedb DbName
+	truncatedb)
+		TRUNCATEDB  "$2"
+	;;
+	# ./edb showTables DbName
+	showTables)	
+		showTables "$2"
+	;;
+	# ./edb dropdb DbName
+        dropdb)
+                DROPDB  "$2"
+        ;;
+	backupone)
+		BACKUPONEDB $2 $3
+	;;
+	*)
+		echo do not support this comand,just support command like  exec backupdb backuptb retory example:
+		echo "./edb exec 'use DbName;select * from top_level'"
+		echo "./edb backupdb '--no-data' 'DbName DbName_0 DbName_1' DbName.sql"
+	        echo "./edb backupone 'DbName_1' DbName.sql	"
+		echo "./edb backuptb '-d' DbName 'top_level top_gem' DbName.sql"
+		echo "./edb truncatetables DbName g_chuanyin"
+		echo "./edb restory alldatabasesData.sql "
+		echo "./edb execsql DbName DbName.sql"
+		echo "./edb truncatedb DbName"
+		echo "./edb showTables DbName"
+		echo "./edb dropdb DbName"
+		exit 1
+	;;
+esac
+
+exit 0
+

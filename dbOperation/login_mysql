@@ -1,0 +1,13 @@
+#! /bin/bash
+# 登录数据库的
+
+cd $(dirname $0)
+
+. ../utils/qiunet.utils
+
+MYSQLHOST=`getProperty mysql.properties  host`
+MYSQLPORT=`getProperty mysql.properties  port`
+MYSQLUSER=`getProperty mysql.properties  user`
+MYSQLPASS=`getProperty mysql.properties  pass`
+
+mysql -h$MYSQLHOST -u$MYSQLUSER -p$MYSQLPASS -P$MYSQLPORT --default-character-set=utf8mb4
