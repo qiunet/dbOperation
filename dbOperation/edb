@@ -196,11 +196,11 @@ case "$1" in
 	;;
 	*)
 		echo do not support this comand,just support command like  exec backupdb backuptb retory example:
-		echo "./edb exec 'use DbName;select * from top_level'"
+		echo "./edb exec 'use DbName;select * from tableName'"
 		echo "./edb backupdb '--no-data' 'DbName DbName_0 DbName_1' DbName.sql"
 	        echo "./edb backupone 'DbName_1' DbName.sql	"
-		echo "./edb backuptb '-d' DbName 'top_level top_gem' DbName.sql"
-		echo "./edb truncatetables DbName g_chuanyin"
+		echo "./edb backuptb '-d' DbName 'tbName1 tbName2' DbName.sql"
+		echo "./edb truncatetables DbName 'table1 table2'"
 		echo "./edb restory alldatabasesData.sql "
 		echo "./edb execsql DbName DbName.sql"
 		echo "./edb truncatedb DbName"
