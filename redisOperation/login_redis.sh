@@ -8,4 +8,4 @@ port=`getProperty redis.properties port`
 pass=`getProperty redis.properties pass`
 db=`getProperty redis.properties db`
 
-redis-cli -h ${host} -a "${pass}" -n $db -p ${port}
+redis-cli --raw -h ${host} -a "${pass}" -n $db -p ${port}

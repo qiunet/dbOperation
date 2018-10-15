@@ -16,4 +16,4 @@ fi
 host=`getProperty redis.properties host`
 port=`getProperty redis.properties port`
 pass=`getProperty redis.properties pass`
-redis-cli -h "${host}" -a "${pass}" -p "${port}" $@
+redis-cli --raw -h "${host}" -a "${pass}" -p "${port}" $@
