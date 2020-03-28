@@ -9,7 +9,7 @@ cd `dirname $0`
 . ../utils/qiunet.utils
 
 if [ $# = 0 ];then
-        echo "need parameter!"
+        red "need parameter!"
         exit 1
 fi
 
